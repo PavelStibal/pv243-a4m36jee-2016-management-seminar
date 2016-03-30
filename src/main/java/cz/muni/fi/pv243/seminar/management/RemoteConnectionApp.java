@@ -21,6 +21,14 @@
  */
 package cz.muni.fi.pv243.seminar.management;
 
+import org.jboss.as.controller.client.ModelControllerClient;
+import org.jboss.dmr.ModelNode;
+
+import javax.security.auth.callback.*;
+import javax.security.sasl.RealmCallback;
+import java.io.IOException;
+import java.net.InetAddress;
+
 /**
  * WildFly 10 Java API example - connect to remote WildFly 10 instance
  *
@@ -32,12 +40,46 @@ public class RemoteConnectionApp {
 
     public static void main(String[] args) throws Exception {
 
-        // connect to remote WildFly 10 instance
+        ModelControllerClient client = RemoteConnectionApp.createClient(
+                InetAddress.getByName("127.0.0.1"),
+                9990,
+                "ferda",
+                "mravenec1*".toCharArray(),
+                "ManagementRealm"
+        );
 
-        // execute any command
+        ModelNode op = new ModelNode();
+        op.get("operation").set("whoami");
 
-        // print results
+        ModelNode returnVal = client.execute(op);
 
-        // close client
+        System.out.println(returnVal.get("result").toString());
+
+        client.close();
+    }
+
+    private static ModelControllerClient createClient(final InetAddress host, final int port,
+                                                      final String username, final char[] password, final String securityRealmName) {
+
+        final CallbackHandler callbackHandler = new CallbackHandler() {
+            public void handle(Callback[] callbacks) throws IOException, UnsupportedCallbackException {
+                for (Callback current : callbacks) {
+                    if (current instanceof NameCallback) {
+                        NameCallback ncb = (NameCallback) current;
+                        ncb.setName(username);
+                    } else if (current instanceof PasswordCallback) {
+                        PasswordCallback pcb = (PasswordCallback) current;
+                        pcb.setPassword(password);
+                    } else if (current instanceof RealmCallback) {
+                        RealmCallback rcb = (RealmCallback) current;
+                        rcb.setText(rcb.getDefaultText());
+                    } else {
+                        throw new UnsupportedCallbackException(current);
+                    }
+                }
+            }
+        };
+
+        return ModelControllerClient.Factory.create(host, port, callbackHandler);
     }
 }
