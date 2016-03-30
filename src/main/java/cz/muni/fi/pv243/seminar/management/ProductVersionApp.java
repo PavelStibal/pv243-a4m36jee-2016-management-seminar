@@ -41,12 +41,13 @@ public class ProductVersionApp {
 
         ModelNode op = new ModelNode();
 
-        // set operation
+        op.get("operation").set("read-attribute");
+
+        op.get("name").set("product-version");
 
         ModelNode returnVal = client.execute(op);
 
-
-        // display results
+        System.out.println(returnVal.get("result").toString());
 
         client.close();
     }
